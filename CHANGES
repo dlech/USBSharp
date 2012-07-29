@@ -1,0 +1,6 @@
+1.1 July 28, 2012:
+  Added experimental MacOS and Linux support.
+  Added experimental report descriptor parsing.
+  
+1.0 August 28, 2010:
+  Initial release.
