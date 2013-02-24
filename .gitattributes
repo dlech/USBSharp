@@ -2,8 +2,6 @@
 *        text=auto
 
 *.cs     text diff=csharp
-*.frm    text eol=crlf
-*.vbp    text eol=crlf
 
 *.csproj text merge=union
 *.sln    text merge=union eol=crlf
