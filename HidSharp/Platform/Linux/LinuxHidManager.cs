@@ -76,33 +76,20 @@ namespace HidSharp.Platform.Linux
             
         }
 
-        public override bool IsSupported
-        {
-            get
-            {
-                try
-                {
-					string sysname; Version release; string machine;
-					if (NativeMethods.uname(out sysname, out release, out machine))
-					{
-						IntPtr udev = NativeMethods.udev_new();
-						if (IntPtr.Zero != udev)
-						{
-							NativeMethods.udev_unref(udev);
-							return sysname == "Linux" && release >= new Version(2, 6, 36);
-						}
-					}
+        public override bool IsSupported {
+            get {
+                // basically, we are just testing if libudev is present
+                try {
+                    var udev = NativeMethods.udev_new();
+                    if (udev == IntPtr.Zero) {
+                        return false;
+                    }
+                    NativeMethods.udev_unref(udev);
+                    return true;
                 }
-				catch
-				{
-					
-				}
-                finally
-                {
-
+                catch (DllNotFoundException) {
+                    return false;
                 }
-
-                return false;
             }
         }
     }

@@ -91,37 +91,6 @@ namespace HidSharp.Platform.Linux
 			}
 		}
 
-		public static bool uname(out string sysname, out Version release, out string machine)
-		{
-			string releaseStr; release = null;
-			if (!uname(out sysname, out releaseStr, out machine)) { return false; }
-            releaseStr = new string(releaseStr.Trim().TakeWhile(ch => (ch >= '0' && ch <= '9') || ch == '.').ToArray());
-			release = new Version(releaseStr);
-			return true;
-		}
-		
-        public static bool uname(out string sysname, out string release, out string machine)
-        {
-            sysname = null; release = null; machine = null;
-
-            string syscallPath = "Mono.Unix.Native.Syscall, Mono.Posix, PublicKeyToken=0738eb9f132ed756";
-            var syscall = Type.GetType(syscallPath);
-            if (syscall == null) { return false; }
-
-            var unameArgs = new object[1];
-            int unameRet = (int)syscall.InvokeMember("uname",
-                                                     BindingFlags.InvokeMethod | BindingFlags.Static, null, null, unameArgs,
-                                                     CultureInfo.InvariantCulture);
-            if (unameRet < 0) { return false; }
-
-            var uname = unameArgs[0];
-			Func<string, string> getMember = s => (string)uname.GetType().InvokeMember(s,
-                                                                                       BindingFlags.GetField, null, uname, new object[0],
-                                                                                       CultureInfo.InvariantCulture);
-            sysname = getMember("sysname"); release = getMember("release"); machine = getMember("machine");
-            return true;
-        }
-		
 		[DllImport(libc, SetLastError = true)]
 		public static extern int open(
 			[MarshalAs(UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(Utf8Marshaler))] string filename,
