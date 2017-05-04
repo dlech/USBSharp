@@ -1,5 +1,6 @@
 ﻿#region License
 /* Copyright 2012 James F. Bellinger <http://www.zer7.com/software/hidsharp>
+ * Copyright 2017 David Lechner <david@lechnology.com>
 
    Permission to use, copy, modify, and/or distribute this software for any
    purpose with or without fee is hereby granted, provided that the above
@@ -18,48 +19,76 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
+using static HidSharp.Platform.Linux.NativeMethods;
+
 namespace HidSharp.Platform.Linux
 {
     class LinuxHidManager : HidManager
     {
-        protected override object[] Refresh()
-        {
-            var paths = new List<string>();
+        IntPtr udev;
+        IntPtr monitor;
+        IList<string> paths = new SynchronizedCollection<string>();
 
-	        IntPtr udev = NativeMethods.udev_new();
-            if (IntPtr.Zero != udev)
-            {
-                try
+        public override void Init()
+        {
+            // TODO: should probably do some better error checking here
+            udev = udev_new();
+            monitor = udev_monitor_new_from_netlink(udev, "udev");
+            udev_monitor_filter_add_match_subsystem_devtype(monitor, "hidraw", null);
+            udev_monitor_enable_receiving(monitor);
+            var enumerate = udev_enumerate_new(udev);
+            try {
+                udev_enumerate_add_match_subsystem(enumerate, "hidraw");
+                udev_enumerate_scan_devices(enumerate);
+                for (var entry = udev_enumerate_get_list_entry(enumerate);
+                     entry != IntPtr.Zero;
+                     entry = udev_list_entry_get_next(entry))
                 {
-                    IntPtr enumerate = NativeMethods.udev_enumerate_new(udev);
-                    if (IntPtr.Zero != enumerate)
-                    {
-                        try
-                        {
-                            if (0 == NativeMethods.udev_enumerate_add_match_subsystem(enumerate, "hidraw") &&
-                                0 == NativeMethods.udev_enumerate_scan_devices(enumerate))
-                            {
-                                IntPtr entry;
-                                for (entry = NativeMethods.udev_enumerate_get_list_entry(enumerate); entry != IntPtr.Zero;
-                                     entry = NativeMethods.udev_list_entry_get_next(entry))
-                                {
-                                    string syspath = NativeMethods.udev_list_entry_get_name(entry);
-                                    if (syspath != null) { paths.Add(syspath); }
-                                }
-                            }
-                        }
-                        finally
-                        {
-                            NativeMethods.udev_enumerate_unref(enumerate);
-                        }
+                    var syspath = udev_list_entry_get_name(entry);
+                    if (syspath != null) {
+                        paths.Add(syspath);
                     }
                 }
-                finally
-                {
-                    NativeMethods.udev_unref(udev);
+            }
+            finally {
+                udev_enumerate_unref(enumerate);
+            }
+            // FIXME: Need to implement IDisposeable and free udev and monitor
+        }
+
+        public override void Run()
+        {
+            var fds = new pollfd[1];
+            fds[0].fd = udev_monitor_get_fd(monitor);
+            fds[0].events = pollev.IN;
+            while (true) {
+                int ret = retry(() => poll(fds, (IntPtr)fds.Length, -1));
+                if (ret == -1) {
+                    // FIXME: how do we notify the main program that something bad happened here?
+                    break;
+                }
+                var device = udev_monitor_receive_device(monitor);
+                try {
+                    var action = udev_device_get_action(device);
+                    var syspath = udev_device_get_syspath(device);
+                    switch (action) {
+                    case "add":
+                        if (syspath != null) {
+                            paths.Add(syspath);
+                        }
+                        break;
+                    case "remove":
+                        paths.Remove(syspath);
+                        break;
+                    }
+                } finally {
+                    udev_device_unref(device);
                 }
             }
+        }
 
+        protected override object[] Refresh()
+        {
             return paths.Cast<object>().ToArray();
         }
 

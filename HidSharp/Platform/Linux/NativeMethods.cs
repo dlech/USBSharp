@@ -158,6 +158,14 @@ namespace HidSharp.Platform.Linux
         public static extern string udev_device_get_devnode(IntPtr device);
 
         [DllImport(libudev)]
+        [return: MarshalAs(UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(Utf8Marshaler))]
+        public static extern string udev_device_get_syspath(IntPtr device);
+
+        [DllImport(libudev)]
+        [return: MarshalAs(UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(Utf8Marshaler))]
+        public static extern string udev_device_get_action(IntPtr device);
+
+        [DllImport(libudev)]
         public static extern IntPtr udev_device_get_parent_with_subsystem_devtype(IntPtr device,
             [MarshalAs(UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(Utf8Marshaler))] string subsystem,
             [MarshalAs(UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(Utf8Marshaler))] string devtype);
@@ -166,6 +174,27 @@ namespace HidSharp.Platform.Linux
         [return: MarshalAs(UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(Utf8Marshaler))]
         public static extern string udev_device_get_sysattr_value(IntPtr device,
             [MarshalAs(UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(Utf8Marshaler))] string sysattr);
+
+        [DllImport(libudev)]
+        public static extern void udev_monitor_unref(IntPtr monitor);
+
+        [DllImport(libudev)]
+        public static extern IntPtr udev_monitor_new_from_netlink(IntPtr udev,
+            [MarshalAs(UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(Utf8Marshaler))] string name);
+
+        [DllImport(libudev)]
+        public static extern int udev_monitor_enable_receiving(IntPtr monitor);
+
+        [DllImport(libudev)]
+        public static extern int udev_monitor_get_fd(IntPtr monitor);
+
+        [DllImport(libudev)]
+        public static extern IntPtr udev_monitor_receive_device(IntPtr monitor);
+
+        [DllImport(libudev)]
+        public static extern int udev_monitor_filter_add_match_subsystem_devtype(IntPtr monitor,
+            [MarshalAs(UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(Utf8Marshaler))] string subsystem,
+            [MarshalAs(UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(Utf8Marshaler))] string devtype);
 
         public static bool TryParseHex(string hex, out int result)
         {
